@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Wardrobe Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Nav -->
+  <header class="navbar" role="banner">
+    <div class="navbar-brand">
+      <span class="navbar-icon" aria-hidden="true">👔</span>
+      <span class="navbar-title">AI Wardrobe Analyzer</span>
+    </div>
+    <button class="btn btn-ghost" id="btn-settings" aria-label="Open settings">
+      ⚙️ Settings
+    </button>
+  </header>
+
+  <!-- Main layout -->
+  <main class="app-layout" role="main">
+    <!-- Left panel: capture + form -->
+    <section class="panel panel-left" aria-label="Capture panel">
+
+      <!-- Camera / Upload -->
+      <div class="capture-card" id="capture-card">
+        <div class="capture-header">
+          <h2 class="section-title">Capture Clothing</h2>
+          <label class="btn btn-secondary btn-sm" for="file-upload" aria-label="Upload image from device">
+            📁 Upload
+            <input type="file" id="file-upload" accept="image/jpeg,image/png,image/webp"
+              aria-label="Upload clothing image" hidden />
+          </label>
+        </div>
+
+        <!-- Camera view -->
+        <div class="camera-container" id="camera-container">
+          <video id="camera-video" autoplay playsinline muted
+            aria-label="Live camera feed" width="640" height="480"></video>
+          <canvas id="camera-canvas" width="640" height="480" hidden aria-hidden="true"></canvas>
+          <img id="preview-image" class="preview-image" alt="Captured clothing preview" hidden />
+
+          <!-- Permission denied overlay -->
+          <div class="camera-overlay" id="camera-denied" hidden aria-live="polite">
+            <span class="overlay-icon" aria-hidden="true">📷</span>
+            <p>Camera access denied.</p>
+            <p>Please upload an image instead.</p>
+          </div>
+
+          <!-- Analyzing overlay -->
+          <div class="camera-overlay analyzing-overlay" id="analyzing-overlay" hidden aria-live="polite" aria-label="Analyzing clothing">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Analyzing clothing...</p>
+          </div>
+        </div>
+
+        <!-- Camera controls -->
+        <div class="capture-controls" id="capture-controls">
+          <button class="btn btn-capture" id="btn-capture" aria-label="Capture photo">
+            <span aria-hidden="true">●</span>
+          </button>
+          <span class="capture-hint">Click to capture</span>
+        </div>
+
+        <!-- Post-capture controls -->
+        <div class="capture-controls" id="post-capture-controls" hidden>
+          <button class="btn btn-primary" id="btn-analyze" aria-label="Analyze captured image">
+            🔍 Analyze
+          </button>
+          <button class="btn btn-secondary" id="btn-retake" aria-label="Retake photo">
+            🔄 Retake
+          </button>
+        </div>
+
+        <!-- Error banner -->
+        <div class="error-banner" id="error-banner" hidden role="alert" aria-live="assertive">
+          <span id="error-text"></span>
+          <button class="btn btn-sm btn-ghost" id="btn-retry" aria-label="Retry analysis">Retry</button>
+        </div>
+      </div>
+
+      <!-- Attribute Form -->
+      <div class="form-card" id="form-card" hidden>
+        <h2 class="section-title">Review Attributes</h2>
+        <p class="form-subtitle">AI-extracted values — edit before saving.</p>
+        <form id="attribute-form" novalidate>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="f-type">Garment Type <span class="required" aria-hidden="true">*</span></label>
+              <select id="f-type" name="garment_type" required aria-required="true">
+                <option value="">Select…</option>
+                <option>T-Shirt</option><option>Shirt</option><option>Blouse</option>
+                <option>Sweater</option><option>Jacket</option><option>Coat</option>
+                <option>Dress</option><option>Skirt</option><option>Pants</option>
+                <option>Jeans</option><option>Shorts</option><option>Suit</option>
+                <option>Activewear</option><option>Outerwear</option><option>Other</option>
+              </select>
+              <span class="field-error" id="err-type" aria-live="polite"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="f-primary-color">Primary Color <span class="required" aria-hidden="true">*</span></label>
+              <input type="text" id="f-primary-color" name="primary_color" required
+                aria-required="true" placeholder="e.g. Navy Blue" maxlength="50" />
+              <span class="field-error" id="err-primary-color" aria-live="polite"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="f-secondary-color">Secondary Color</label>
+              <input type="text" id="f-secondary-color" name="secondary_color"
+                placeholder="e.g. White (or leave blank)" maxlength="50" />
+            </div>
+
+            <div class="form-group">
+              <label for="f-fit">Fit <span class="required" aria-hidden="true">*</span></label>
+              <select id="f-fit" name="fit" required aria-required="true">
+                <option value="">Select…</option>
+                <option>Slim</option><option>Regular</option><option>Relaxed</option>
+                <option>Oversized</option><option>Fitted</option><option>Cropped</option>
+                <option>Tailored</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-material">Material</label>
+              <input type="text" id="f-material" name="material"
+                placeholder="e.g. Cotton, Wool" maxlength="50" />
+            </div>
+
+            <div class="form-group">
+              <label for="f-pattern">Pattern</label>
+              <select id="f-pattern" name="pattern">
+                <option value="">Select…</option>
+                <option>Solid</option><option>Striped</option><option>Plaid</option>
+                <option>Floral</option><option>Geometric</option><option>Animal Print</option>
+                <option>Graphic</option><option>Houndstooth</option><option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-occasion">Occasion</label>
+              <select id="f-occasion" name="occasion">
+                <option value="">Select…</option>
+                <option>Casual</option><option>Business Casual</option><option>Formal</option>
+                <option>Athletic</option><option>Lounge</option><option>Outdoor</option>
+                <option>Smart Casual</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-sleeve">Sleeve Length</label>
+              <select id="f-sleeve" name="sleeve_length">
+                <option value="">Select…</option>
+                <option>Sleeveless</option><option>Short Sleeve</option>
+                <option>3/4 Sleeve</option><option>Long Sleeve</option><option>N/A</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group form-group-full">
+            <label for="f-notes">Notes</label>
+            <textarea id="f-notes" name="notes" rows="2"
+              placeholder="Optional notes…" maxlength="500" aria-label="Optional notes about this item"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="btn-save" aria-label="Save to wardrobe">
+              💾 Save to Wardrobe
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-discard" aria-label="Discard and go back">
+              ✕ Discard
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Right panel: wardrobe table -->
+    <section class="panel panel-right" aria-label="Wardrobe catalog">
+      <div class="table-header">
+        <div class="table-meta">
+          <h2 class="section-title">My Wardrobe</h2>
+          <span class="item-count" id="item-count" aria-live="polite">0 items</span>
+        </div>
+        <div class="table-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-export" aria-label="Export wardrobe as CSV">
+            ⬇️ Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Storage indicator -->
+      <div class="storage-bar-wrapper" id="storage-warning" hidden role="status" aria-live="polite">
+        <span id="storage-text">Storage: 0 KB used</span>
+        <div class="storage-bar"><div class="storage-fill" id="storage-fill"></div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-row" role="search" aria-label="Filter wardrobe">
+        <select id="filter-type" aria-label="Filter by garment type">
+          <option value="">All Types</option>
+          <option>T-Shirt</option><option>Shirt</option><option>Blouse</option>
+          <option>Sweater</option><option>Jacket</option><option>Coat</option>
+          <option>Dress</option><option>Skirt</option><option>Pants</option>
+          <option>Jeans</option><option>Shorts</option><option>Suit</option>
+          <option>Activewear</option><option>Outerwear</option><option>Other</option>
+        </select>
+        <select id="filter-color" aria-label="Filter by color">
+          <option value="">All Colors</option>
+        </select>
+        <select id="filter-fit" aria-label="Filter by fit">
+          <option value="">All Fits</option>
+          <option>Slim</option><option>Regular</option><option>Relaxed</option>
+          <option>Oversized</option><option>Fitted</option><option>Cropped</option>
+          <option>Tailored</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="btn-clear-filters" aria-label="Clear all filters">
+          ✕ Clear
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper" role="region" aria-label="Wardrobe items table">
+        <table class="wardrobe-table" id="wardrobe-table" aria-label="Wardrobe catalog">
+          <thead>
+            <tr>
+              <th scope="col">Image</th>
+              <th scope="col" class="sortable" data-col="garment_type" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by type">Type</th>
+              <th scope="col" class="sortable" data-col="primary_color" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by color">Color</th>
+              <th scope="col" class="sortable" data-col="fit" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by fit">Fit</th>
+              <th scope="col" class="sortable" data-col="material" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by material">Material</th>
+              <th scope="col" class="sortable" data-col="pattern" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by pattern">Pattern</th>
+              <th scope="col" class="sortable" data-col="occasion" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by occasion">Occasion</th>
+              <th scope="col">Notes</th>
+              <th scope="col" class="sortable" data-col="created_at" tabindex="0" role="button"
+                aria-sort="none" aria-label="Sort by date added">Added</th>
+              <th scope="col">Confidence</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="wardrobe-tbody">
+            <!-- rows injected by table.js -->
+          </tbody>
+        </table>
+        <div class="empty-state" id="empty-state" aria-live="polite">
+          <span class="empty-icon" aria-hidden="true">👗</span>
+          <p>Your wardrobe is empty. Capture or upload a clothing item to get started.</p>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination" role="navigation" aria-label="Table pagination"></div>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="settings-modal" hidden role="dialog"
+    aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="settings-title">Settings</h2>
+        <button class="btn btn-ghost btn-icon" id="btn-close-settings" aria-label="Close settings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="s-endpoint">API Endpoint URL</label>
+          <input type="url" id="s-endpoint" placeholder="https://api.openai.com/v1"
+            aria-label="API endpoint URL" />
+        </div>
+        <div class="form-group">
+          <label for="s-apikey">API Key <span class="hint">(stored in session only, cleared on tab close)</span></label>
+          <input type="password" id="s-apikey" placeholder="sk-…"
+            aria-label="API key, stored in session storage only" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="s-model">Model Name</label>
+          <input type="text" id="s-model" placeholder="gpt-4o" aria-label="Model name" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="s-tokens">Max Tokens</label>
+            <input type="number" id="s-tokens" min="64" max="4096" placeholder="512"
+              aria-label="Maximum tokens" />
+          </div>
+          <div class="form-group">
+            <label for="s-temp">Temperature</label>
+            <input type="number" id="s-temp" min="0" max="2" step="0.05" placeholder="0.1"
+              aria-label="Model temperature" />
+          </div>
+        </div>
+        <div class="form-group">
+          <button class="btn btn-secondary" id="btn-test-connection" aria-label="Test API connection">
+            🔌 Test Connection
+          </button>
+          <span class="connection-status" id="connection-status" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-save-settings" aria-label="Save settings">Save</button>
+        <button class="btn btn-secondary" id="btn-cancel-settings" aria-label="Cancel settings">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-backdrop" id="delete-modal" hidden role="dialog"
+    aria-modal="true" aria-labelledby="delete-title">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="delete-title">Delete Item</h2>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this item from your wardrobe? This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="btn-confirm-delete" aria-label="Confirm delete">Delete</button>
+        <button class="btn btn-secondary" id="btn-cancel-delete" aria-label="Cancel delete">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="camera.js"></script>
+  <script src="api.js"></script>
+  <script src="table.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
